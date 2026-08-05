@@ -1,0 +1,10 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.env
+*.db
+media/
+tests/
+.pytest_cache/
+.ruff_cache/

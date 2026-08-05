@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "notes": [
+    "Per-100g values for the 12 classes the model is trained on.",
+    "Nigerian dishes are sourced from the West African Food Composition Table (FAO, 2019) and Nigerian Food Composition Table (2017); values for composite dishes are approximations of a typical home preparation and will vary with recipe, oil content and palm oil use.",
+    "Food-101 categories are sourced from USDA FoodData Central (SR Legacy / Survey FNDDS).",
+    "default_portion_g is the typical single serving used when portion size cannot be estimated from the image."
+  ],
+  "classes": [
+    {
+      "key": "jollof_rice",
+      "label": "Jollof Rice",
+      "cuisine": "nigerian",
+      "per_100g": { "kcal": 152, "protein_g": 3.1, "carbs_g": 25.4, "fat_g": 4.3 },
+      "default_portion_g": 250,
+      "source": "West African Food Composition Table (FAO, 2019), cooked rice dish with tomato stew base"
+    },
+    {
+      "key": "egusi_soup",
+      "label": "Egusi Soup",
+      "cuisine": "nigerian",
+      "per_100g": { "kcal": 198, "protein_g": 9.4, "carbs_g": 5.2, "fat_g": 16.1 },
+      "default_portion_g": 200,
+      "source": "Nigerian Food Composition Table (2017), melon seed soup with leafy vegetable and palm oil"
+    },
+    {
+      "key": "pounded_yam",
+      "label": "Pounded Yam",
+      "cuisine": "nigerian",
+      "per_100g": { "kcal": 114, "protein_g": 1.5, "carbs_g": 27.0, "fat_g": 0.2 },
+      "default_portion_g": 250,
+      "source": "West African Food Composition Table (FAO, 2019), boiled and pounded white yam"
+    },
+    {
+      "key": "amala",
+      "label": "Amala",
+      "cuisine": "nigerian",
+      "per_100g": { "kcal": 108, "protein_g": 1.3, "carbs_g": 25.6, "fat_g": 0.2 },
+      "default_portion_g": 220,
+      "source": "Nigerian Food Composition Table (2017), yam flour swallow"
+    },
+    {
+      "key": "eba",
+      "label": "Eba",
+      "cuisine": "nigerian",
+      "per_100g": { "kcal": 130, "protein_g": 1.1, "carbs_g": 31.2, "fat_g": 0.2 },
+      "default_portion_g": 220,
+      "source": "Nigerian Food Composition Table (2017), garri swallow"
+    },
+    {
+      "key": "moi_moi",
+      "label": "Moi Moi",
+      "cuisine": "nigerian",
+      "per_100g": { "kcal": 163, "protein_g": 8.7, "carbs_g": 14.9, "fat_g": 7.8 },
+      "default_portion_g": 180,
+      "source": "Nigerian Food Composition Table (2017), steamed cowpea bean pudding"
+    },
+    {
+      "key": "fried_rice",
+      "label": "Fried Rice",
+      "cuisine": "international",
+      "per_100g": { "kcal": 163, "protein_g": 4.0, "carbs_g": 23.1, "fat_g": 5.7 },
+      "default_portion_g": 250,
+      "source": "USDA FoodData Central, FNDDS, fried rice with vegetables"
+    },
+    {
+      "key": "pizza",
+      "label": "Pizza",
+      "cuisine": "international",
+      "per_100g": { "kcal": 266, "protein_g": 11.4, "carbs_g": 33.0, "fat_g": 9.7 },
+      "default_portion_g": 200,
+      "source": "USDA FoodData Central, SR Legacy, cheese pizza, regular crust"
+    },
+    {
+      "key": "hamburger",
+      "label": "Hamburger",
+      "cuisine": "international",
+      "per_100g": { "kcal": 254, "protein_g": 13.5, "carbs_g": 20.6, "fat_g": 12.8 },
+      "default_portion_g": 220,
+      "source": "USDA FoodData Central, FNDDS, hamburger on bun with condiments"
+    },
+    {
+      "key": "caesar_salad",
+      "label": "Caesar Salad",
+      "cuisine": "international",
+      "per_100g": { "kcal": 158, "protein_g": 4.7, "carbs_g": 5.6, "fat_g": 13.1 },
+      "default_portion_g": 200,
+      "source": "USDA FoodData Central, FNDDS, caesar salad with dressing, no meat"
+    },
+    {
+      "key": "french_fries",
+      "label": "French Fries",
+      "cuisine": "international",
+      "per_100g": { "kcal": 312, "protein_g": 3.4, "carbs_g": 41.4, "fat_g": 14.7 },
+      "default_portion_g": 150,
+      "source": "USDA FoodData Central, SR Legacy, potato, french fried, deep fried"
+    },
+    {
+      "key": "grilled_salmon",
+      "label": "Grilled Salmon",
+      "cuisine": "international",
+      "per_100g": { "kcal": 206, "protein_g": 22.1, "carbs_g": 0.0, "fat_g": 12.4 },
+      "default_portion_g": 170,
+      "source": "USDA FoodData Central, SR Legacy, salmon, atlantic, cooked, dry heat"
+    }
+  ]
+}

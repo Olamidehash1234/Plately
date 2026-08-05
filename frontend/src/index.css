@@ -1,0 +1,113 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
+
+/* Founders Grotesk — used for all head texts (display + headlines). Licensed
+   font supplied locally; weights map to the design tokens (400/500/600). */
+@font-face {
+  font-family: "Founders Grotesk";
+  src: url("/fonts/FoundersGrotesk-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Founders Grotesk";
+  src: url("/fonts/FoundersGrotesk-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Founders Grotesk";
+  src: url("/fonts/FoundersGrotesk-Semibold.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Founders Grotesk";
+  src: url("/fonts/FoundersGrotesk-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-on-background font-body-md;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer components {
+  .material-symbols-outlined {
+    font-family: "Material Symbols Outlined";
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    /* Keep icons optically centred against text and other icons in flex rows
+       instead of sitting on the text baseline. */
+    vertical-align: middle;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    -webkit-font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+  .material-symbols-outlined.filled {
+    font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+  }
+
+  /* The single sophisticated shadow token from the Plately design system */
+  .editorial-shadow {
+    box-shadow:
+      0 1px 2px rgba(22, 13, 15, 0.04),
+      0 12px 28px rgba(22, 13, 15, 0.06);
+  }
+
+  .hairline-border {
+    border: 1px solid #e8e6df;
+  }
+
+  .skeleton-shimmer {
+    background: linear-gradient(90deg, #f5ece5 25%, #efe7e0 50%, #f5ece5 75%);
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Custom editorial scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #fff8f3;
+}
+::-webkit-scrollbar-thumb {
+  background: #bec9c1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6f7a72;
+}

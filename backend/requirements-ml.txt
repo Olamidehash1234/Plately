@@ -1,0 +1,10 @@
+# TensorFlow is a large install (~600MB) and is only needed once you have a
+# trained model to serve. The backend starts and runs without it; /classify
+# returns a clear 503 until both this package and a model file are present.
+#
+#     pip install -r requirements-ml.txt
+#
+# The training scripts in ../ml also need this file.
+tensorflow==2.20.0
+scikit-learn==1.7.2
+matplotlib==3.10.7

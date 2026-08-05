@@ -1,0 +1,16 @@
+# Slim inference dependencies, for serving a trained model in deployment.
+#
+# LiteRT (formerly tflite-runtime) is the interpreter alone, without any of the
+# training machinery: roughly 50 MB installed against TensorFlow's ~600 MB, and
+# it loads a MobileNetV2 classifier in a fraction of the memory. That is the
+# difference between fitting on a small instance and being killed by the OOM
+# reaper.
+#
+#     pip install -r requirements-serve.txt
+#
+# It needs ml/artifacts/model.tflite, produced from the trained Keras model by:
+#
+#     python ml/export_tflite.py
+#
+# Training still requires the full TensorFlow install in requirements-ml.txt.
+ai-edge-litert==2.1.6

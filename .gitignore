@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Local configuration and data
+.env
+*.db
+backend/media/
+
+# Training data and outputs — regenerate with ml/prepare_data.py and ml/train.py
+ml/dataset/
+ml/artifacts/
+ml/raw_food101/
+
+# Your own photographs. Regenerating these means shooting them again, so keep
+# a backup somewhere outside this checkout.
+ml/raw_nigerian/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Editors and OS
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Word's lock files, which appear whenever a chapter is open
+~$*.docx
