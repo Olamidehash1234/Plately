@@ -29,6 +29,7 @@ pad out the classes, not to replace photographs of your own.
 import argparse
 import csv
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -42,6 +43,26 @@ from common import ML_DIR, nigerian_classes
 
 HARVEST_DIR = ML_DIR / "web_harvest"
 CREDITS_PATH = HARVEST_DIR / "CREDITS.csv"
+
+# API credentials, kept out of version control. Either file may be absent —
+# the source is simply skipped, and Wikimedia Commons needs no key at all.
+OPENVERSE_CREDENTIALS = ML_DIR / ".openverse.json"
+FLICKR_CREDENTIALS = ML_DIR / ".flickr.json"
+
+# Flickr licence ids worth training on. 3 and 6 are the "no derivatives"
+# licences, which sit badly with using an image to build a model, so they are
+# left out. The non-commercial ones are fine for a student project.
+FLICKR_LICENCES = "1,2,4,5,7,9,10"
+FLICKR_LICENCE_NAMES = {
+    "0": "All Rights Reserved",
+    "1": "CC BY-NC-SA 2.0",
+    "2": "CC BY-NC 2.0",
+    "4": "CC BY 2.0",
+    "5": "CC BY-SA 2.0",
+    "7": "No known copyright restrictions",
+    "9": "CC0 1.0",
+    "10": "Public Domain Mark",
+}
 
 # Identifies the project to both APIs, as their terms ask.
 USER_AGENT = (
@@ -72,13 +93,76 @@ def fetch_json(url: str) -> dict:
         return json.load(response)
 
 
+def load_credentials(path: Path) -> dict | None:
+    """Read an API credential file, or fall back to the environment."""
+    if path.is_file():
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            print(f"    {path.name} is not valid JSON — ignoring it")
+    return None
+
+
+_openverse_token: str | None = None
+
+
+def openverse_token() -> str | None:
+    """Exchange the client credentials for a bearer token, once per run.
+
+    Anonymous Openverse requests are capped and start returning 401 partway
+    through a harvest, so a token is what makes this source usable at all.
+    """
+    global _openverse_token
+    if _openverse_token is not None:
+        return _openverse_token or None
+
+    creds = load_credentials(OPENVERSE_CREDENTIALS) or {}
+    client_id = creds.get("client_id") or os.environ.get("OPENVERSE_CLIENT_ID")
+    secret = creds.get("client_secret") or os.environ.get("OPENVERSE_CLIENT_SECRET")
+    if not (client_id and secret):
+        _openverse_token = ""
+        return None
+
+    body = urllib.parse.urlencode(
+        {
+            "client_id": client_id,
+            "client_secret": secret,
+            "grant_type": "client_credentials",
+        }
+    ).encode()
+    request = urllib.request.Request(
+        "https://api.openverse.org/v1/auth_tokens/token/",
+        data=body,
+        headers={"User-Agent": USER_AGENT},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            _openverse_token = json.load(response).get("access_token", "")
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
+        print(f"    openverse authentication failed: {error}")
+        _openverse_token = ""
+
+    return _openverse_token or None
+
+
 def search_openverse(query: str, limit: int) -> list[dict]:
     """CC-licensed images from Openverse, newest API shape."""
     url = "https://api.openverse.org/v1/images/?" + urllib.parse.urlencode(
         {"q": query, "page_size": min(limit, 100), "license_type": "all-cc"}
     )
+    token = openverse_token()
+    headers = {"User-Agent": USER_AGENT}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
     try:
-        payload = fetch_json(url)
+        request = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(request, timeout=30) as response:
+            payload = json.load(response)
+    except urllib.error.HTTPError as error:
+        hint = " (no API key — see the module docstring)" if error.code == 401 else ""
+        print(f"    openverse failed for '{query}': {error}{hint}")
+        return []
     except (urllib.error.URLError, TimeoutError) as error:
         print(f"    openverse failed for '{query}': {error}")
         return []
@@ -150,6 +234,67 @@ def search_commons(query: str, limit: int) -> list[dict]:
     return found
 
 
+def search_flickr(query: str, limit: int) -> list[dict]:
+    """CC-licensed photographs from Flickr.
+
+    Worth more than it looks for this project: Flickr is amateur photography,
+    so the pictures resemble what a user will actually upload — a plate on a
+    table — rather than the studio shots that dominate stock libraries.
+    """
+    creds = load_credentials(FLICKR_CREDENTIALS) or {}
+    api_key = creds.get("api_key") or os.environ.get("FLICKR_API_KEY")
+    if not api_key:
+        return []
+
+    url = "https://www.flickr.com/services/rest/?" + urllib.parse.urlencode(
+        {
+            "method": "flickr.photos.search",
+            "api_key": api_key,
+            "text": query,
+            "license": FLICKR_LICENCES,
+            "sort": "relevance",
+            "content_type": "1",  # photos only, no screenshots or artwork
+            "media": "photos",
+            "safe_search": "1",
+            "per_page": str(min(limit, 100)),
+            "extras": "url_l,url_c,license,owner_name,path_alias",
+            "format": "json",
+            "nojsoncallback": "1",
+        }
+    )
+    try:
+        payload = fetch_json(url)
+    except (urllib.error.URLError, TimeoutError) as error:
+        print(f"    flickr failed for '{query}': {error}")
+        return []
+
+    if payload.get("stat") != "ok":
+        print(f"    flickr rejected '{query}': {payload.get('message', 'unknown error')}")
+        return []
+
+    found = []
+    for photo in payload.get("photos", {}).get("photo", []):
+        # url_l is the 1024px version; url_c (800px) is the fallback.
+        image_url = photo.get("url_l") or photo.get("url_c")
+        if not image_url:
+            continue
+
+        owner = photo.get("path_alias") or photo.get("owner", "")
+        licence_id = str(photo.get("license", "0"))
+        found.append(
+            {
+                "url": image_url,
+                "source": "Flickr",
+                "title": photo.get("title", ""),
+                "creator": photo.get("ownername") or owner or "unknown",
+                "license": FLICKR_LICENCE_NAMES.get(licence_id, f"licence {licence_id}"),
+                "license_url": "https://creativecommons.org/licenses/",
+                "page": f"https://www.flickr.com/photos/{owner}/{photo.get('id', '')}",
+            }
+        )
+    return found
+
+
 def _strip_tags(html: str) -> str:
     out, depth = [], 0
     for char in html:
@@ -204,7 +349,7 @@ def harvest(class_key: str, per_class: int, credits: list[dict]) -> int:
     candidates: list[dict] = []
 
     for query in QUERIES[class_key]:
-        for search in (search_openverse, search_commons):
+        for search in (search_openverse, search_flickr, search_commons):
             time.sleep(PAUSE_SECONDS)
             for item in search(query, per_class):
                 if item["url"] in seen_urls:

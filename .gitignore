@@ -32,3 +32,10 @@ frontend/dist/
 
 # Word's lock files, which appear whenever a chapter is open
 ~$*.docx
+
+# API credentials for the dataset harvester
+ml/.openverse.json
+ml/.flickr.json
+
+# Unreviewed web downloads — staging only, never the training set
+ml/web_harvest/
