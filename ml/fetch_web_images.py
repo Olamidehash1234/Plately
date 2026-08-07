@@ -75,6 +75,12 @@ PAUSE_SECONDS = 1.5
 
 MIN_EDGE = 224  # the training size; smaller images are upscaled guesswork
 
+# Openverse aggregates Flickr and Wikimedia, so the same photograph arrives
+# from two sources under two different URLs. Comparing the pictures rather
+# than their addresses is the only way to notice. Hamming distance over a
+# 64-bit average hash: 0 is the same file, 4 tolerates a rescale or recompress.
+NEAR_DUPLICATE_BITS = 4
+
 # Several phrasings per dish, because one search term finds one slice of what
 # is out there — and Nigerian dishes are spelled inconsistently online.
 QUERIES = {
@@ -341,9 +347,46 @@ def download(candidate: dict, destination: Path) -> Path | None:
     return destination
 
 
+def average_hash(path: Path) -> int | None:
+    """A 64-bit fingerprint of the picture: is each pixel above the mean?
+
+    Shrinking to 8x8 greyscale throws away everything except the broad layout
+    of light and dark, which is what survives a rescale or a re-encode and is
+    what two copies of one photograph have in common.
+    """
+    try:
+        with Image.open(path) as image:
+            small = image.convert("L").resize((8, 8))
+    except (OSError, ValueError):
+        return None
+
+    pixels = list(small.tobytes())
+    mean = sum(pixels) / len(pixels)
+    bits = 0
+    for index, value in enumerate(pixels):
+        if value > mean:
+            bits |= 1 << index
+    return bits
+
+
+def is_duplicate(fingerprint: int, seen: list[int]) -> bool:
+    return any(
+        bin(fingerprint ^ other).count("1") <= NEAR_DUPLICATE_BITS for other in seen
+    )
+
+
 def harvest(class_key: str, per_class: int, credits: list[dict]) -> int:
     destination_dir = HARVEST_DIR / class_key
     destination_dir.mkdir(parents=True, exist_ok=True)
+
+    # Seed from what is already here, so a second run does not re-download
+    # pictures a first run kept, nor reintroduce ones you rejected.
+    seen_hashes: list[int] = []
+    for existing in sorted(destination_dir.rglob("*")):
+        if existing.is_file() and existing.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"}:
+            fingerprint = average_hash(existing)
+            if fingerprint is not None:
+                seen_hashes.append(fingerprint)
 
     seen_urls: set[str] = set()
     candidates: list[dict] = []
@@ -375,6 +418,14 @@ def harvest(class_key: str, per_class: int, credits: list[dict]) -> int:
         time.sleep(PAUSE_SECONDS)
         if download(candidate, target) is None:
             continue
+
+        fingerprint = average_hash(target)
+        if fingerprint is not None:
+            if is_duplicate(fingerprint, seen_hashes):
+                target.unlink()
+                print("    skipped: already have this photograph")
+                continue
+            seen_hashes.append(fingerprint)
 
         kept += 1
         credits.append(

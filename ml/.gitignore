@@ -5,7 +5,10 @@ dataset/
 artifacts/
 
 # Your own photographs — large, and belong in backup rather than git.
-# Remove this line if you want them versioned.
-raw_nigerian/
+# Remove this line if you want them versioned. Git will not look inside an
+# excluded directory, so the directory itself is re-included and its contents
+# excluded instead; that is what lets CREDITS.csv through.
+raw_nigerian/*
+!raw_nigerian/CREDITS.csv
 
 __pycache__/

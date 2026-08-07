@@ -103,6 +103,37 @@ swallows of similar shape. They are the classes most likely to be confused, and
 Chapter 1's "low inter-class variance" problem in concrete form. Give them the
 most images and the most variation — `status` marks them for this reason.
 
+### Padding the Nigerian classes from the web
+
+Photographing 150 of each dish takes weeks. `fetch_web_images.py` downloads
+openly-licensed photographs to fill the gap, and records the licence and author
+of every file in `ml/web_harvest/CREDITS.csv` so the report can credit them.
+
+```bash
+python ml/fetch_web_images.py                  # all six, into ml/web_harvest/
+python ml/screen_harvest.py                    # bin what is not food at all
+python ml/review_harvest.py dedupe             # the same photo from two sources
+python ml/review_harvest.py sheet              # contact sheets to review
+python ml/review_harvest.py drop --class eba 3 7 12
+python ml/collect_nigerian.py add eba ml/web_harvest/eba
+```
+
+Nothing reaches the training set without passing your eyes. Search engines
+match words, not pictures: "eba garri" returns as much cassava being processed
+as it does eba, "amala" returns an actress of that name, and one harvest of
+"pounded yam" came back with a concert and a plate of pulled pork. The screener
+removes what is obviously not food; `sheet` writes an indexed grid per class so
+you can spot the rest and pass the indices to `drop`. Rejects move to
+`<class>/_rejected/`, so `restore` undoes a mistake.
+
+Read the warning above about amala, eba and pounded yam twice here. A caption
+saying "eba" is not evidence that the bowl contains eba, and no script can
+check it. On those three, keep only what you recognise yourself.
+
+Web photographs are also mostly studio shots, while your users will submit
+phone snaps of a plate on a table. Use these to pad the classes, not to replace
+photographs of your own.
+
 ### Build the dataset
 
 ```bash

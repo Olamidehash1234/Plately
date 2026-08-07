@@ -18,6 +18,7 @@ the test split makes the accuracy in Chapter 4 look better than it is.
 """
 
 import argparse
+import csv
 import hashlib
 import sys
 from pathlib import Path
@@ -27,6 +28,10 @@ from PIL import Image, ImageFilter, ImageOps, ImageStat
 from common import IMAGE_SIZE, ML_DIR, load_class_labels, nigerian_classes
 
 RAW_DIR = ML_DIR / "raw_nigerian"
+
+# Attribution for images that came from a web harvest, carried across the
+# rename at ingest so the dataset can say who took each photograph.
+RAW_CREDITS_PATH = RAW_DIR / "CREDITS.csv"
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".bmp"}
 
@@ -117,14 +122,22 @@ def stored_images(class_key: str) -> list[Path]:
 
 
 def gather_sources(paths: list[Path]) -> list[Path]:
-    """Expand directories, keep only plausible image files."""
+    """Expand directories, keep only plausible image files.
+
+    Folders whose name starts with an underscore are skipped. The harvest
+    tools park discarded images in `_rejected/` beside the ones you kept, and
+    recursing into it would quietly put every picture you just rejected back
+    into the training set.
+    """
     found: list[Path] = []
     for path in paths:
         if path.is_dir():
             found.extend(
                 p
                 for p in sorted(path.rglob("*"))
-                if p.is_file() and p.suffix.lower() in IMAGE_SUFFIXES
+                if p.is_file()
+                and p.suffix.lower() in IMAGE_SUFFIXES
+                and not any(part.startswith("_") for part in p.relative_to(path).parts)
             )
         elif path.is_file():
             found.append(path)
@@ -165,6 +178,50 @@ def normalise(image: Image.Image) -> Image.Image:
     return clean
 
 
+CREDITS_FIELDS = [
+    "class", "file", "source", "title", "creator", "license", "license_url", "page",
+]
+
+
+def find_credits(source: Path) -> dict[str, dict] | None:
+    """The harvester's attribution table, if this image came from a harvest.
+
+    Looked for beside the folder the file sits in. Returns rows keyed by the
+    harvested filename, which is what the table records.
+    """
+    for parent in (source.parent, source.parent.parent):
+        table = parent / "CREDITS.csv"
+        if table.is_file():
+            with table.open(encoding="utf-8", newline="") as handle:
+                return {row["file"]: row for row in csv.DictReader(handle)}
+    return None
+
+
+def record_credit(row: dict, stored_name: str) -> None:
+    """Carry one attribution row across the rename into the dataset's own table.
+
+    `add` names stored files after their content, so the harvested filename
+    that CREDITS.csv keys on disappears at ingest. Without this the dataset
+    would contain images whose licences require attribution and no record of
+    who to attribute them to.
+    """
+    existing: list[dict] = []
+    if RAW_CREDITS_PATH.is_file():
+        with RAW_CREDITS_PATH.open(encoding="utf-8", newline="") as handle:
+            existing = list(csv.DictReader(handle))
+
+    if any(r["file"] == stored_name for r in existing):
+        return
+
+    existing.append({**{k: row.get(k, "") for k in CREDITS_FIELDS}, "file": stored_name})
+
+    RAW_CREDITS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with RAW_CREDITS_PATH.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=CREDITS_FIELDS)
+        writer.writeheader()
+        writer.writerows(existing)
+
+
 def add(class_key: str, sources: list[Path], reject_blurry: bool) -> int:
     if class_key not in nigerian_classes():
         print(f"Unknown class '{class_key}'. Expected one of:", file=sys.stderr)
@@ -183,7 +240,8 @@ def add(class_key: str, sources: list[Path], reject_blurry: bool) -> int:
     seen = existing_hashes(class_key)
     print(f"Adding to {class_key} ({len(seen)} images already stored)\n")
 
-    added = duplicates = rejected = blurry = 0
+    added = duplicates = rejected = blurry = credited = 0
+    credits = find_credits(files[0])
 
     for source in files:
         try:
@@ -226,10 +284,16 @@ def add(class_key: str, sources: list[Path], reject_blurry: bool) -> int:
         seen[fingerprint] = target
         added += 1
 
+        if credits is not None and source.name in credits:
+            record_credit(credits[source.name], target.name)
+            credited += 1
+
     print(
         f"\nAdded {added}, skipped {duplicates} duplicates, rejected {rejected}."
         + (f" {blurry} kept but flagged as soft." if blurry else "")
     )
+    if credited:
+        print(f"Attribution for {credited} of them recorded in {RAW_CREDITS_PATH}.")
     total = len(stored_images(class_key))
     print(f"{class_key} now has {total} images (target {TARGET_PER_CLASS}).")
     return 0

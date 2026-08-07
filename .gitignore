@@ -18,7 +18,13 @@ ml/raw_food101/
 
 # Your own photographs. Regenerating these means shooting them again, so keep
 # a backup somewhere outside this checkout.
-ml/raw_nigerian/
+#
+# …except the attribution table. Most of the web-sourced images are under
+# licences that require credit, so the record of who took them has to be
+# versioned even though the images themselves are not. Git will not look
+# inside an excluded directory, hence the `/*` rather than `/`.
+ml/raw_nigerian/*
+!ml/raw_nigerian/CREDITS.csv
 
 # Node
 node_modules/
