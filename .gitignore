@@ -13,7 +13,12 @@ backend/media/
 
 # Training data and outputs — regenerate with ml/prepare_data.py and ml/train.py
 ml/dataset/
-ml/artifacts/
+ml/artifacts/*
+# …but the served model is versioned. It is 9 MB, and Railway builds from
+# git — without it in the repo the deployed API has no model to load and
+# /classify answers 503 forever. model.keras stays out: only TFLite ships.
+!ml/artifacts/model.tflite
+!ml/artifacts/class_indices.json
 ml/raw_food101/
 
 # Your own photographs. Regenerating these means shooting them again, so keep
