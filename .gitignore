@@ -50,3 +50,4 @@ ml/.flickr.json
 
 # Unreviewed web downloads — staging only, never the training set
 ml/web_harvest/
+.docx-backups/
