@@ -1,0 +1,35 @@
+# Netlify builds and serves the front end; the API stays on Railway.
+#
+# The front end is static files, so a CDN serves it for nothing. The API needs
+# a running process and a writable volume, which is what the Railway service
+# is for. VITE_API_URL points one at the other.
+
+[build]
+  # The repository root holds both halves, so point Netlify at the front end.
+  base = "frontend"
+  command = "npm run build"
+  # Relative to base, so this is frontend/dist.
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# A single-page app owns its routing: the browser asking for /history must
+# still be handed index.html, or every URL except / returns 404. The app would
+# work until someone refreshes the page or opened a link you shared with them.
+#
+# status = 200 rewrites rather than redirects, so the address bar keeps the
+# path the user actually asked for.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Vite fingerprints asset filenames, so a given URL's contents never change
+# and it can be cached indefinitely. index.html must not be, or a browser
+# holds a stale page pointing at assets the new deploy no longer has —
+# Netlify handles that one itself.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
