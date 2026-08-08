@@ -115,6 +115,40 @@ def build_model(keras, num_classes: int):
     return model, base
 
 
+def compute_class_weights(class_names: list[str]) -> dict[int, float]:
+    """Weight each class inversely to how many training images it has.
+
+    The dataset is roughly two to one against the Nigerian dishes — 45 images
+    for each international class against 17 to 27 for amala, eba, egusi, moi
+    moi, jollof and pounded yam. Unweighted, the loss is minimised by learning
+    the six well-represented classes well and treating the rest as noise, and
+    that is measurably what happened: in the first Colab run every single one
+    of the 34 Nigerian misclassifications landed on an international class and
+    none on another Nigerian class. The model was not confusing amala with eba;
+    it had learned not to answer "amala" at all.
+
+    Weighting makes a mistake on a rare class cost proportionally more, which
+    is the standard remedy and costs nothing but a rerun. It is not a
+    substitute for more photographs — a weight cannot invent detail that 17
+    images of eba do not contain — but it establishes how much of the problem
+    is imbalance and how much is scarcity, and those need different fixes.
+
+    Same formula as sklearn's compute_class_weight(class_weight="balanced"),
+    written out to avoid the dependency: n_samples / (n_classes * n_class).
+    """
+    counts = {
+        name: sum(1 for path in (TRAIN_DIR / name).iterdir() if path.is_file())
+        for name in class_names
+    }
+    total = sum(counts.values())
+    present = [name for name in class_names if counts[name]]
+    return {
+        index: total / (len(present) * counts[name])
+        for index, name in enumerate(class_names)
+        if counts[name]
+    }
+
+
 def write_history(histories: list) -> None:
     """Flatten one or more History objects into a single CSV."""
     rows: list[dict] = []
@@ -155,6 +189,17 @@ def main() -> int:
         help="How many of the base's top layers to unfreeze in phase 2.",
     )
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument(
+        "--class-weight",
+        choices=("balanced", "none"),
+        default="balanced",
+        help=(
+            "balanced (default) weights each class inversely to its image "
+            "count; none trains unweighted. Keep both runs — the comparison "
+            "is what tells you whether the Nigerian classes are held back by "
+            "imbalance or simply by having too few images."
+        ),
+    )
     args = parser.parse_args()
 
     if not TRAIN_DIR.exists():
@@ -219,6 +264,14 @@ def main() -> int:
     train_ds = augment_dataset(train_ds, augmentation, tf).prefetch(autotune)
     val_ds = val_ds.cache().prefetch(autotune)
 
+    class_weight = None
+    if args.class_weight == "balanced":
+        class_weight = compute_class_weights(class_names)
+        print("\nClass weights (higher = fewer training images):")
+        for index, name in enumerate(class_names):
+            if index in class_weight:
+                print(f"  {name:<16} {class_weight[index]:.2f}")
+
     model, base = build_model(keras, len(class_names))
     model.compile(
         optimizer=keras.optimizers.Adam(learning_rate=1e-3),
@@ -248,6 +301,7 @@ def main() -> int:
             validation_data=val_ds,
             epochs=args.epochs,
             callbacks=callbacks,
+            class_weight=class_weight,
             # The dataset is already shuffled; fit()'s default would warn.
             shuffle=False,
         )
@@ -279,6 +333,7 @@ def main() -> int:
                 validation_data=val_ds,
                 epochs=args.fine_tune_epochs,
                 callbacks=callbacks,
+                class_weight=class_weight,
                 shuffle=False,
             )
         )
