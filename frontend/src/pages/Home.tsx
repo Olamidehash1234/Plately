@@ -274,7 +274,13 @@ export default function Home() {
           <section className="mt-16 md:mt-20">
             <div className="bg-primary-container/10 p-8 md:p-10 rounded-[24px] flex flex-col md:flex-row items-center gap-10">
               <div className="flex-1">
-                <h2 className="font-headline-lg text-headline-lg text-on-primary-container mb-4">
+                {/* text-primary, not on-primary-container: the panel behind
+                    this is primary-container at 10%, which blends to near
+                    white, and on-primary-container is the pale mint meant for
+                    the full-strength green. On this background it came out at
+                    1.09:1 — invisible. text-primary gives 6.03:1 and keeps
+                    the accent colour. */}
+                <h2 className="font-headline-lg text-headline-lg text-primary mb-4">
                   Smart Recommendation
                 </h2>
                 <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed max-w-2xl">
