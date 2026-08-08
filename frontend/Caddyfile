@@ -1,0 +1,24 @@
+# Serve the built SPA.
+#
+# :{$PORT:80} binds whatever port the host assigns, falling back to 80 locally.
+#
+# try_files is the part that matters: a single-page app owns its routing, so a
+# browser asking for /history or /profile must still be handed index.html. A
+# static server without this rule returns 404 for every URL except the root —
+# the app works until someone refreshes the page or follows a shared link.
+:{$PORT:80} {
+	root * /srv
+	encode gzip
+
+	# Hashed asset filenames are immutable, so they can be cached hard.
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	# index.html must never be cached, or a deploy leaves browsers holding a
+	# stale page that references asset files no longer on the server.
+	@html path /index.html /
+	header @html Cache-Control "no-cache"
+
+	try_files {path} /index.html
+	file_server
+}
